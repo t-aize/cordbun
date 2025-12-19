@@ -25,12 +25,12 @@
 		"clean": "rimraf dist"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.3.8",
+		"@biomejs/biome": "^2.3.10",
 		"@types/bun": "latest",
 		"husky": "^9.1.7",
 		"lint-staged": "^16.2.7",
 		"rimraf": "^6.1.2",
-		"tsdown": "^0.17.3",
+		"tsdown": "^0.17.4",
 		"typescript": "^5.9.3"
 	},
 	"lint-staged": {
