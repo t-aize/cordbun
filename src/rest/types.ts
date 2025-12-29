@@ -11,6 +11,8 @@ export interface RestOptions {
 	userAgent?: string;
 	retries?: number;
 	timeout?: number;
+	invalidRequestWarningInterval?: number;
+	sweepInterval?: number;
 }
 
 export interface RequestOptions {
@@ -89,6 +91,13 @@ export class RateLimitError extends Error {
 	) {
 		super(`Rate limited for ${retryAfter}s${global ? " (global)" : ""}`);
 		this.name = "RateLimitError";
+	}
+}
+
+export class CloudflareError extends Error {
+	constructor(public readonly status: number) {
+		super(`Cloudflare error: ${status}`);
+		this.name = "CloudflareError";
 	}
 }
 

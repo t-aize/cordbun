@@ -1,5 +1,5 @@
 import { GatewayOpcode } from "../constants/index.js";
-import { createRest } from "../rest/index.js";
+import { Rest } from "../rest/index.js";
 import type { GatewayEventName, GatewayEvents } from "./events.js";
 import { createShard, type Shard } from "./shard.js";
 import {
@@ -81,7 +81,7 @@ const validateOptions = (options: GatewayClientOptions): void => {
 export const createGateway = (options: GatewayClientOptions): Gateway => {
 	validateOptions(options);
 
-	const rest = createRest(options.token);
+	const rest = new Rest(options.token);
 	const shards = new Map<number, Shard>();
 	const handlers: Map<
 		GatewayEventName,

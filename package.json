@@ -1,18 +1,33 @@
 {
-	"$schema": "https://json.schemastore.org/package.json",
 	"name": "cordbun",
 	"version": "0.0.1",
-	"type": "module",
-	"packageManager": "bun@1.3.4",
-	"license": "Apache-2.0",
 	"main": "./dist/index.js",
-	"types": "./dist/index.d.ts",
+	"devDependencies": {
+		"@biomejs/biome": "^2.3.10",
+		"@types/bun": "latest",
+		"husky": "^9.1.7",
+		"lint-staged": "^16.2.7",
+		"rimraf": "^6.1.2",
+		"tsdown": "^0.17.4",
+		"typescript": "^5.9.3"
+	},
+	"peerDependencies": {
+		"erlpack": "^0.1.4"
+	},
 	"exports": {
 		".": {
 			"import": "./dist/index.js",
 			"types": "./dist/index.d.ts"
 		}
 	},
+	"$schema": "https://json.schemastore.org/package.json",
+	"license": "Apache-2.0",
+	"lint-staged": {
+		"*.{js,ts,jsx,tsx,svelte}": [
+			"biome check --write --unsafe --no-errors-on-unmatched"
+		]
+	},
+	"packageManager": "bun@1.3.4",
 	"scripts": {
 		"build": "tsdown",
 		"dev": "tsc",
@@ -25,21 +40,10 @@
 		"prepare": "husky",
 		"clean": "rimraf dist"
 	},
-	"peerDependencies": {
-		"erlpack": "^0.1.4"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "^2.3.10",
-		"@types/bun": "latest",
-		"husky": "^9.1.7",
-		"lint-staged": "^16.2.7",
-		"rimraf": "^6.1.2",
-		"tsdown": "^0.17.4",
-		"typescript": "^5.9.3"
-	},
-	"lint-staged": {
-		"*.{js,ts,jsx,tsx,svelte}": [
-			"biome check --write --unsafe --no-errors-on-unmatched"
-		]
+	"type": "module",
+	"types": "./dist/index.d.ts",
+	"dependencies": {
+		"discord-api-types": "^0.38.37",
+		"discord.js": "^14.25.1"
 	}
 }

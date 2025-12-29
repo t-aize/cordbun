@@ -1,54 +1,43 @@
 import type { RateLimitBucket, RateLimitData } from "./types.js";
 
-export interface BucketManager {
-	get: (key: string) => RateLimitBucket | undefined;
-	set: (key: string, bucket: RateLimitBucket) => void;
-	update: (key: string, data: RateLimitData) => void;
-	acquire: (key: string) => Promise<void>;
-	isLimited: (key: string) => boolean;
-	getDelay: (key: string) => number;
-	globalReset: number;
-	setGlobalReset: (reset: number) => void;
-}
+const DEFAULT_SWEEP_INTERVAL = 300_000;
 
-export const createBucketManager = (): BucketManager => {
-	const buckets = new Map<string, RateLimitBucket>();
-	const bucketKeys = new Map<string, string>();
-	let globalReset = 0;
+export class BucketManager {
+	globalReset = 0;
 
-	const get = (key: string): RateLimitBucket | undefined => {
-		const bucketKey = bucketKeys.get(key) ?? key;
-		return buckets.get(bucketKey);
-	};
+	private readonly buckets = new Map<string, RateLimitBucket>();
+	private readonly bucketKeys = new Map<string, string>();
+	private sweepTimer: Timer | null = null;
 
-	const set = (key: string, bucket: RateLimitBucket): void => {
-		buckets.set(key, bucket);
-	};
+	get(key: string): RateLimitBucket | undefined {
+		const bucketKey = this.bucketKeys.get(key) ?? key;
+		return this.buckets.get(bucketKey);
+	}
 
-	const update = (key: string, data: RateLimitData): void => {
+	update(key: string, data: RateLimitData): void {
 		if (data.bucket) {
-			bucketKeys.set(key, data.bucket);
+			this.bucketKeys.set(key, data.bucket);
 		}
 
 		const bucketKey = data.bucket ?? key;
-		const existing = buckets.get(bucketKey);
+		const existing = this.buckets.get(bucketKey);
 
-		buckets.set(bucketKey, {
+		this.buckets.set(bucketKey, {
 			limit: data.limit,
 			remaining: data.remaining,
 			reset: data.reset * 1000,
 			processing: existing?.processing ?? null,
 		});
-	};
+	}
 
-	const getDelay = (key: string): number => {
+	getDelay(key: string): number {
 		const now = Date.now();
 
-		if (globalReset > now) {
-			return globalReset - now;
+		if (this.globalReset > now) {
+			return this.globalReset - now;
 		}
 
-		const bucket = get(key);
+		const bucket = this.get(key);
 		if (!bucket) return 0;
 
 		if (bucket.remaining <= 0 && bucket.reset > now) {
@@ -56,40 +45,61 @@ export const createBucketManager = (): BucketManager => {
 		}
 
 		return 0;
-	};
+	}
 
-	const isLimited = (key: string): boolean => getDelay(key) > 0;
+	isLimited(key: string): boolean {
+		return this.getDelay(key) > 0;
+	}
 
-	const acquire = async (key: string): Promise<void> => {
-		const delay = getDelay(key);
+	async acquire(key: string): Promise<void> {
+		const delay = this.getDelay(key);
 		if (delay > 0) {
 			await Bun.sleep(delay);
 		}
 
-		const bucket = get(key);
+		const bucket = this.get(key);
 		if (bucket?.processing) {
 			await bucket.processing;
-			return acquire(key);
+			return this.acquire(key);
 		}
-	};
+	}
 
-	const setGlobalReset = (reset: number): void => {
-		globalReset = reset;
-	};
+	setGlobalReset(reset: number): void {
+		this.globalReset = reset;
+	}
 
-	return {
-		get,
-		set,
-		update,
-		acquire,
-		isLimited,
-		getDelay,
-		get globalReset() {
-			return globalReset;
-		},
-		setGlobalReset,
-	};
-};
+	sweep(): number {
+		const now = Date.now();
+		let swept = 0;
+
+		for (const [key, bucket] of this.buckets) {
+			if (bucket.reset < now && !bucket.processing) {
+				this.buckets.delete(key);
+				swept++;
+			}
+		}
+
+		for (const [routeKey, bucketKey] of this.bucketKeys) {
+			if (!this.buckets.has(bucketKey)) {
+				this.bucketKeys.delete(routeKey);
+			}
+		}
+
+		return swept;
+	}
+
+	startSweeper(interval = DEFAULT_SWEEP_INTERVAL): void {
+		if (this.sweepTimer) return;
+		this.sweepTimer = setInterval(() => this.sweep(), interval);
+	}
+
+	stopSweeper(): void {
+		if (this.sweepTimer) {
+			clearInterval(this.sweepTimer);
+			this.sweepTimer = null;
+		}
+	}
+}
 
 export const getRouteKey = (method: string, route: string): string => {
 	const majorParams = route.match(/\/(channels|guilds|webhooks)\/(\d+)/);
