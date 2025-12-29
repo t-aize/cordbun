@@ -1,11 +1,12 @@
-import { EventEmitter } from "node:events";
-import { API_BASE_URL, ApiVersion } from "../constants/index.js";
-import type { ApiErrorResponse } from "../resources/index.js";
-import { buildMultipartBody, createFileAttachment } from "../utils/index.js";
-import { BucketManager, getRouteKey } from "./bucket.js";
-import type { RestEvents } from "./events.js";
+import {EventEmitter} from "node:events";
+import {API_BASE_URL, ApiVersion} from "../constants/index.js";
+import type {ApiErrorResponse} from "../resources/index.js";
+import {buildMultipartBody, createFileAttachment, DEFAULT_ATTACHMENT_SIZE_LIMIT} from "../utils/index.js";
+import {BucketManager, getRouteKey} from "./bucket.js";
+import type {RestEvents} from "./events.js";
 import {
 	CloudflareError,
+	FileTooLargeError,
 	type HttpMethod,
 	type RateLimitData,
 	RateLimitError,
@@ -17,15 +18,6 @@ import {
 	type RestResponse,
 } from "./types.js";
 
-const DEFAULT_OPTIONS: Required<Omit<RestOptions, "userAgent">> = {
-	authType: "Bot",
-	version: 10,
-	retries: 3,
-	timeout: 15000,
-	invalidRequestWarningInterval: 0,
-	sweepInterval: 300_000,
-};
-
 const INVALID_REQUEST_WINDOW = 600_000;
 
 const LIB_VERSION = "0.0.1";
@@ -36,11 +28,13 @@ const VALID_API_VERSIONS = Object.values(ApiVersion).filter(
 ) as ApiVersion[];
 const VALID_AUTH_TYPES = ["Bot", "Bearer"] as const;
 
+type ResolvedRestOptions = Required<Omit<RestOptions, "userAgent">> & {
+	userAgent: string;
+};
+
 export class Rest extends EventEmitter<RestEvents> {
 	private token: string;
-	private config: Required<Omit<RestOptions, "userAgent">> & {
-		userAgent?: string;
-	};
+	private config: ResolvedRestOptions;
 	private readonly buckets = new BucketManager();
 	private invalidRequestCount = 0;
 	private invalidRequestResetTime = Date.now() + INVALID_REQUEST_WINDOW;
@@ -48,10 +42,8 @@ export class Rest extends EventEmitter<RestEvents> {
 
 	constructor(token: string, options: RestOptions = {}) {
 		super();
-		this.validateOptions(options);
-
 		this.token = token;
-		this.config = { ...DEFAULT_OPTIONS, ...options };
+		this.config = this.validateOptions(options);
 
 		if (this.config.sweepInterval > 0) {
 			this.buckets.startSweeper(this.config.sweepInterval);
@@ -115,7 +107,6 @@ export class Rest extends EventEmitter<RestEvents> {
 			}
 
 			if (response.status === 429) {
-				this.trackInvalidRequest();
 				await this.handleRateLimit(response, routeKey);
 			}
 
@@ -214,7 +205,7 @@ export class Rest extends EventEmitter<RestEvents> {
 		this.removeAllListeners();
 	}
 
-	private validateOptions(options: RestOptions): void {
+	private validateOptions(options: RestOptions): ResolvedRestOptions {
 		if (
 			options.authType !== undefined &&
 			!VALID_AUTH_TYPES.includes(options.authType)
@@ -261,6 +252,16 @@ export class Rest extends EventEmitter<RestEvents> {
 				throw new TypeError("Invalid userAgent: Must be a non-empty string");
 			}
 		}
+
+		return {
+			authType: options.authType ?? "Bot",
+			version: options.version ?? 10,
+			retries: options.retries ?? 3,
+			timeout: options.timeout ?? 15000,
+			invalidRequestWarningInterval: options.invalidRequestWarningInterval ?? 0,
+			sweepInterval: options.sweepInterval ?? 300_000,
+			userAgent: options.userAgent ?? `DiscordBot (${LIB_URL}, ${LIB_VERSION})`,
+		};
 	}
 
 	private trackInvalidRequest(): void {
@@ -274,8 +275,7 @@ export class Rest extends EventEmitter<RestEvents> {
 
 	private buildHeaders(opts: RequestOptions): Headers {
 		const headers = new Headers({
-			"User-Agent":
-				this.config.userAgent ?? `DiscordBot (${LIB_URL}, ${LIB_VERSION})`,
+			"User-Agent": this.config.userAgent,
 		});
 
 		if (opts.auth !== false) {
@@ -309,11 +309,23 @@ export class Rest extends EventEmitter<RestEvents> {
 		return url.toString();
 	}
 
+	private getFileSize(data: Blob | ArrayBuffer | Uint8Array): number {
+		if (data instanceof Blob) return data.size;
+		return data.byteLength;
+	}
+
 	private buildBody(
 		opts: RequestOptions,
 		headers: Headers,
 	): string | FormData | undefined {
 		if (opts.files?.length) {
+			for (const file of opts.files) {
+				const size = this.getFileSize(file.data);
+				if (size > DEFAULT_ATTACHMENT_SIZE_LIMIT) {
+					throw new FileTooLargeError(file.name, size, DEFAULT_ATTACHMENT_SIZE_LIMIT);
+				}
+			}
+
 			const files = opts.files.map((file, i) =>
 				createFileAttachment(i, file.name, file.data, file.contentType),
 			);
@@ -350,11 +362,29 @@ export class Rest extends EventEmitter<RestEvents> {
 		response: Response,
 		routeKey: string,
 	): Promise<never> {
-		const data = (await response.json()) as RateLimitResponse;
 		const rateLimit = this.parseRateLimitHeaders(response.headers);
+		const scope = rateLimit?.scope;
 
-		if (data.global) {
-			this.buckets.setGlobalReset(Date.now() + data.retry_after * 1000);
+		if (scope !== "shared") {
+			this.trackInvalidRequest();
+		}
+
+		const retryAfterHeader = response.headers.get("Retry-After");
+		let retryAfter: number;
+		let global: boolean;
+
+		const contentType = response.headers.get("Content-Type");
+		if (contentType?.includes("application/json")) {
+			const data = (await response.json()) as RateLimitResponse;
+			retryAfter = data.retry_after;
+			global = data.global;
+		} else {
+			retryAfter = retryAfterHeader ? Number(retryAfterHeader) : 1;
+			global = rateLimit?.global ?? false;
+		}
+
+		if (global) {
+			this.buckets.setGlobalReset(Date.now() + retryAfter * 1000);
 		}
 
 		if (rateLimit) {
@@ -363,13 +393,13 @@ export class Rest extends EventEmitter<RestEvents> {
 
 		this.emit("rateLimited", {
 			route: routeKey,
-			global: data.global,
+			global,
 			limit: rateLimit?.limit ?? 0,
 			remaining: 0,
-			retryAfter: data.retry_after,
-			scope: rateLimit?.scope,
+			retryAfter,
+			scope,
 		});
 
-		throw new RateLimitError(data.retry_after, data.global, rateLimit?.scope);
+		throw new RateLimitError(retryAfter, global, scope);
 	}
 }

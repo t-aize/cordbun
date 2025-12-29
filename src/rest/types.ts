@@ -101,6 +101,19 @@ export class CloudflareError extends Error {
 	}
 }
 
+export class FileTooLargeError extends Error {
+	constructor(
+		public readonly fileName: string,
+		public readonly size: number,
+		public readonly maxSize: number,
+	) {
+		super(
+			`File "${fileName}" exceeds max size: ${(size / 1024 / 1024).toFixed(2)} MiB > ${maxSize / 1024 / 1024} MiB`,
+		);
+		this.name = "FileTooLargeError";
+	}
+}
+
 export interface RateLimitBucket {
 	limit: number;
 	remaining: number;
