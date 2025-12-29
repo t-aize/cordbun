@@ -41,9 +41,5 @@
 		"clean": "rimraf dist"
 	},
 	"type": "module",
-	"types": "./dist/index.d.ts",
-	"dependencies": {
-		"discord-api-types": "^0.38.37",
-		"discord.js": "^14.25.1"
-	}
+	"types": "./dist/index.d.ts"
 }
