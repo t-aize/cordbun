@@ -1,4 +1,4 @@
-import { defineConfig } from "tsdown";
+import {defineConfig} from "tsdown";
 
 export default defineConfig({
 	entry: ["src/index.ts"],
@@ -9,4 +9,5 @@ export default defineConfig({
 	sourcemap: true,
 	target: "es2024",
 	treeshake: true,
+	outExtensions: () => ({ js: ".js", dts: ".d.ts" }),
 });

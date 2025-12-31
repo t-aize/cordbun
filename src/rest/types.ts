@@ -1,5 +1,5 @@
-import type { JsonErrorCode } from "../constants/index.js";
-import type { ApiErrorResponse } from "../resources/errors.js";
+import type {JsonErrorCode} from "../constants/index.js";
+import type {ApiErrorResponse} from "../resources/errors.js";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -15,10 +15,14 @@ export interface RestOptions {
 	sweepInterval?: number;
 }
 
+export type QueryValue = string | number | boolean | undefined;
+
+export type BodyValue = string | Buffer | ArrayBuffer | Uint8Array | object;
+
 export interface RequestOptions {
-	body?: unknown;
+	body?: BodyValue;
 	files?: FileData[];
-	query?: Record<string, string | number | boolean | undefined>;
+	query?: { [key: string]: QueryValue };
 	reason?: string;
 	auth?: boolean;
 	headers?: Record<string, string>;
@@ -118,7 +122,13 @@ export interface RateLimitBucket {
 	limit: number;
 	remaining: number;
 	reset: number;
-	processing: Promise<void> | null;
+}
+
+export class TimeoutError extends Error {
+	constructor(public readonly timeout: number) {
+		super(`Request timed out after ${timeout}ms`);
+		this.name = "TimeoutError";
+	}
 }
 
 export type RouteMethod = `${HttpMethod} ${string}`;

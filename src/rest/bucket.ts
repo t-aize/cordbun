@@ -1,4 +1,4 @@
-import type { RateLimitBucket, RateLimitData } from "./types.js";
+import type {RateLimitBucket, RateLimitData} from "./types.js";
 
 const DEFAULT_SWEEP_INTERVAL = 300_000;
 
@@ -20,13 +20,11 @@ export class BucketManager {
 		}
 
 		const bucketKey = data.bucket ?? key;
-		const existing = this.buckets.get(bucketKey);
 
 		this.buckets.set(bucketKey, {
 			limit: data.limit,
 			remaining: data.remaining,
 			reset: data.reset * 1000,
-			processing: existing?.processing ?? null,
 		});
 	}
 
@@ -58,9 +56,8 @@ export class BucketManager {
 		}
 
 		const bucket = this.get(key);
-		if (bucket?.processing) {
-			await bucket.processing;
-			return this.acquire(key);
+		if (bucket && bucket.remaining > 0) {
+			bucket.remaining--;
 		}
 	}
 
@@ -73,7 +70,7 @@ export class BucketManager {
 		let swept = 0;
 
 		for (const [key, bucket] of this.buckets) {
-			if (bucket.reset < now && !bucket.processing) {
+			if (bucket.reset < now) {
 				this.buckets.delete(key);
 				swept++;
 			}
@@ -98,6 +95,13 @@ export class BucketManager {
 			clearInterval(this.sweepTimer);
 			this.sweepTimer = null;
 		}
+	}
+
+	destroy(): void {
+		this.stopSweeper();
+		this.buckets.clear();
+		this.bucketKeys.clear();
+		this.globalReset = 0;
 	}
 }
 

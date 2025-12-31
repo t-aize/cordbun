@@ -1,5 +1,7 @@
-import type { Integration } from "./guilds.js";
-import type { PaginationWithCountParams } from "./utils.js";
+import type {Rest} from "../rest/client.js";
+import type {Channel} from "./channels.js";
+import type {Guild, GuildMember, Integration} from "./guilds.js";
+import type {PaginationWithCountParams} from "./utils.js";
 
 export enum UserFlags {
 	Staff = 1 << 0,
@@ -158,3 +160,68 @@ export type UpdateApplicationRoleConnectionParams = Partial<{
 		ApplicationRoleConnection[K]
 	>;
 }>;
+
+
+export class UsersAPI {
+	private readonly rest: Rest;
+	
+	constructor(rest: Rest) {
+		this.rest = rest;
+	}
+
+	async getCurrentUser(): Promise<User> {
+		return this.rest.get("/users/@me");
+	}
+
+	async getUser(userId: string): Promise<User> {
+		return this.rest.get(`/users/${userId}`);
+	}
+
+	async modifyCurrentUser(params: ModifyCurrentUserParams): Promise<User> {
+		return this.rest.patch("/users/@me", { body: params });
+	}
+
+	async getCurrentUserGuilds(
+		params: GetCurrentUserGuildsParams = {},
+	): Promise<Pick<Guild, "id" | "name" | "icon" | "banner" | "owner" | "permissions" | "features" | "approximate_member_count" | "approximate_presence_count">[]> {
+		return this.rest.get("/users/@me/guilds", { query: params });
+	}
+
+	async getCurrentUserGuildMember(guildId: string): Promise<GuildMember> {
+		return this.rest.get(`/users/@me/guilds/${guildId}/member`);
+	}
+
+	async leaveGuild(guildId: string): Promise<void> {
+		return this.rest.delete(`/users/@me/guilds/${guildId}`);
+	}
+
+	async createDM(params: CreateDMParams): Promise<Channel> {
+		return this.rest.post("/users/@me/channels", { body: params });
+	}
+
+	async createGroupDM(params: CreateGroupDMParams): Promise<Channel> {
+		return this.rest.post("/users/@me/channels", { body: params });
+	}
+
+	async getCurrentUserConnections(): Promise<Connection[]> {
+		return this.rest.get("/users/@me/connections");
+	}
+
+	async getCurrentUserApplicationRoleConnection(
+		applicationId: string,
+	): Promise<ApplicationRoleConnection> {
+		return this.rest.get(
+			`/users/@me/applications/${applicationId}/role-connection`,
+		);
+	}
+
+	async updateCurrentUserApplicationRoleConnection(
+		applicationId: string,
+		params: UpdateApplicationRoleConnectionParams,
+	): Promise<ApplicationRoleConnection> {
+		return this.rest.put(
+			`/users/@me/applications/${applicationId}/role-connection`,
+			{ body: params },
+		);
+	}
+}

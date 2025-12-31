@@ -1,4 +1,5 @@
 export interface PaginationParams {
+	[key: string]: string | number | boolean | undefined;
 	before?: string;
 	after?: string;
 	limit?: number;

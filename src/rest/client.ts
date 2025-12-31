@@ -1,6 +1,6 @@
 import {EventEmitter} from "node:events";
 import {API_BASE_URL, ApiVersion} from "../constants/index.js";
-import type {ApiErrorResponse} from "../resources/index.js";
+import {type ApiErrorResponse, UsersAPI} from "../resources/index.js";
 import {buildMultipartBody, createFileAttachment, DEFAULT_ATTACHMENT_SIZE_LIMIT} from "../utils/index.js";
 import {BucketManager, getRouteKey} from "./bucket.js";
 import type {RestEvents} from "./events.js";
@@ -16,6 +16,7 @@ import {
 	RestError,
 	type RestOptions,
 	type RestResponse,
+	TimeoutError,
 } from "./types.js";
 
 const INVALID_REQUEST_WINDOW = 600_000;
@@ -33,6 +34,8 @@ type ResolvedRestOptions = Required<Omit<RestOptions, "userAgent">> & {
 };
 
 export class Rest extends EventEmitter<RestEvents> {
+	public readonly users = new UsersAPI(this);
+
 	private token: string;
 	private config: ResolvedRestOptions;
 	private readonly buckets = new BucketManager();
@@ -145,6 +148,13 @@ export class Rest extends EventEmitter<RestEvents> {
 				rateLimit,
 			};
 		} catch (error) {
+			if (error instanceof DOMException && error.name === "AbortError") {
+				if (retryCount < this.config.retries) {
+					return this.request(method, route, opts, retryCount + 1);
+				}
+				throw new TimeoutError(this.config.timeout);
+			}
+
 			if (error instanceof RateLimitError && retryCount < this.config.retries) {
 				await Bun.sleep(error.retryAfter * 1000);
 				return this.request(method, route, opts, retryCount + 1);
@@ -198,7 +208,7 @@ export class Rest extends EventEmitter<RestEvents> {
 	}
 
 	destroy(): void {
-		this.buckets.stopSweeper();
+		this.buckets.destroy();
 		if (this.invalidRequestWarningTimer) {
 			clearInterval(this.invalidRequestWarningTimer);
 		}
@@ -314,10 +324,20 @@ export class Rest extends EventEmitter<RestEvents> {
 		return data.byteLength;
 	}
 
+	private isBufferLike(
+		value: unknown,
+	): value is Buffer | ArrayBuffer | Uint8Array {
+		return (
+			value instanceof ArrayBuffer ||
+			value instanceof Uint8Array ||
+			(typeof Buffer !== "undefined" && Buffer.isBuffer(value))
+		);
+	}
+
 	private buildBody(
 		opts: RequestOptions,
 		headers: Headers,
-	): string | FormData | undefined {
+	): string | FormData | ArrayBuffer | Uint8Array | undefined {
 		if (opts.files?.length) {
 			for (const file of opts.files) {
 				const size = this.getFileSize(file.data);
@@ -333,12 +353,28 @@ export class Rest extends EventEmitter<RestEvents> {
 			return buildMultipartBody(payload, files);
 		}
 
-		if (opts.body) {
-			headers.set("Content-Type", "application/json");
-			return JSON.stringify(opts.body);
+		if (opts.body === undefined) {
+			return undefined;
 		}
 
-		return undefined;
+		if (typeof opts.body === "string") {
+			if (!headers.has("Content-Type")) {
+				headers.set("Content-Type", "text/plain");
+			}
+			return opts.body;
+		}
+
+		if (this.isBufferLike(opts.body)) {
+			if (!headers.has("Content-Type")) {
+				headers.set("Content-Type", "application/octet-stream");
+			}
+			return opts.body instanceof ArrayBuffer
+				? new Uint8Array(opts.body)
+				: opts.body;
+		}
+
+		headers.set("Content-Type", "application/json");
+		return JSON.stringify(opts.body);
 	}
 
 	private parseRateLimitHeaders(headers: Headers): RateLimitData | null {
