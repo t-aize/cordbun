@@ -71,10 +71,7 @@ export interface Application {
 	event_webhooks_types?: string[];
 	tags?: string[];
 	install_params?: InstallParams;
-	integration_types_config?: Record<
-		string,
-		ApplicationIntegrationTypeConfiguration
-	>;
+	integration_types_config?: Record<string, ApplicationIntegrationTypeConfiguration>;
 	custom_install_url?: string;
 }
 
@@ -98,10 +95,7 @@ export interface EditCurrentApplicationParams {
 	description?: string;
 	role_connections_verification_url?: string;
 	install_params?: InstallParams;
-	integration_types_config?: Record<
-		string,
-		ApplicationIntegrationTypeConfiguration
-	>;
+	integration_types_config?: Record<string, ApplicationIntegrationTypeConfiguration>;
 	flags?: ApplicationFlags;
 	icon?: string | null;
 	cover_image?: string | null;

@@ -3,12 +3,7 @@ import { GatewayCloseCode } from "../constants/index.js";
 export type GatewayEncoding = "json" | "etf";
 export type GatewayCompression = "zlib-stream" | "zstd-stream";
 
-export type PresenceStatus =
-	| "online"
-	| "dnd"
-	| "idle"
-	| "invisible"
-	| "offline";
+export type PresenceStatus = "online" | "dnd" | "idle" | "invisible" | "offline";
 
 export interface Activity {
 	name: string;
@@ -218,13 +213,7 @@ export interface ShardState {
 	lastHeartbeatAck: number;
 }
 
-export type ShardStatus =
-	| "disconnected"
-	| "connecting"
-	| "identifying"
-	| "resuming"
-	| "ready"
-	| "reconnecting";
+export type ShardStatus = "disconnected" | "connecting" | "identifying" | "resuming" | "ready" | "reconnecting";
 
 export const GATEWAY_VERSION = 10;
 export const GATEWAY_URL = "wss://gateway.discord.gg";

@@ -14,17 +14,12 @@ import {
 	type VoiceStateUpdateData,
 } from "./types.js";
 
-type EventHandler<T extends GatewayEventName> = (
-	data: GatewayEvents[T],
-) => void;
+type EventHandler<T extends GatewayEventName> = (data: GatewayEvents[T]) => void;
 
 export interface Gateway {
 	connect: () => Promise<void>;
 	disconnect: () => void;
-	on: <T extends GatewayEventName>(
-		event: T,
-		handler: EventHandler<T>,
-	) => () => void;
+	on: <T extends GatewayEventName>(event: T, handler: EventHandler<T>) => () => void;
 	off: <T extends GatewayEventName>(event: T, handler: EventHandler<T>) => void;
 	updatePresence: (presence: GatewayPresenceUpdate) => void;
 	updateVoiceState: (data: VoiceStateUpdateData) => void;
@@ -50,14 +45,8 @@ const validateOptions = (options: GatewayClientOptions): void => {
 	}
 
 	if (options.largeThreshold !== undefined) {
-		if (
-			!Number.isInteger(options.largeThreshold) ||
-			options.largeThreshold < 50 ||
-			options.largeThreshold > 250
-		) {
-			throw new TypeError(
-				"Invalid largeThreshold: Must be an integer between 50 and 250",
-			);
+		if (!Number.isInteger(options.largeThreshold) || options.largeThreshold < 50 || options.largeThreshold > 250) {
+			throw new TypeError("Invalid largeThreshold: Must be an integer between 50 and 250");
 		}
 	}
 
@@ -71,9 +60,7 @@ const validateOptions = (options: GatewayClientOptions): void => {
 			options.shards[1] < 1 ||
 			options.shards[0] >= options.shards[1]
 		) {
-			throw new TypeError(
-				'Invalid shards: Must be "auto" or [shard_id, num_shards]',
-			);
+			throw new TypeError('Invalid shards: Must be "auto" or [shard_id, num_shards]');
 		}
 	}
 };
@@ -83,19 +70,13 @@ export const createGateway = (options: GatewayClientOptions): Gateway => {
 
 	const rest = new Rest(options.token);
 	const shards = new Map<number, Shard>();
-	const handlers: Map<
-		GatewayEventName,
-		Set<EventHandler<GatewayEventName>>
-	> = new Map();
+	const handlers: Map<GatewayEventName, Set<EventHandler<GatewayEventName>>> = new Map();
 
 	let shardCount = 1;
 	let shardIds: number[] = [0];
 	let maxConcurrency = 1;
 
-	const emit = <T extends GatewayEventName>(
-		event: T,
-		data: GatewayEvents[T],
-	): void => {
+	const emit = <T extends GatewayEventName>(event: T, data: GatewayEvents[T]): void => {
 		const eventHandlers = handlers.get(event);
 		if (eventHandlers) {
 			for (const handler of eventHandlers) {
@@ -173,10 +154,7 @@ export const createGateway = (options: GatewayClientOptions): Gateway => {
 		shards.clear();
 	};
 
-	const on = <T extends GatewayEventName>(
-		event: T,
-		handler: EventHandler<T>,
-	): (() => void) => {
+	const on = <T extends GatewayEventName>(event: T, handler: EventHandler<T>): (() => void) => {
 		if (!handlers.has(event)) {
 			handlers.set(event, new Set());
 		}
@@ -189,10 +167,7 @@ export const createGateway = (options: GatewayClientOptions): Gateway => {
 		return () => off(event, handler);
 	};
 
-	const off = <T extends GatewayEventName>(
-		event: T,
-		handler: EventHandler<T>,
-	): void => {
+	const off = <T extends GatewayEventName>(event: T, handler: EventHandler<T>): void => {
 		handlers.get(event)?.delete(handler as EventHandler<GatewayEventName>);
 		for (const shard of shards.values()) {
 			shard.off(event, handler);

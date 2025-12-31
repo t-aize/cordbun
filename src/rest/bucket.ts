@@ -1,4 +1,4 @@
-import type {RateLimitBucket, RateLimitData} from "./types.js";
+import type { RateLimitBucket, RateLimitData } from "./types.js";
 
 const DEFAULT_SWEEP_INTERVAL = 300_000;
 

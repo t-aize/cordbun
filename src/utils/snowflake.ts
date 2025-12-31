@@ -14,71 +14,58 @@ export interface DeconstructedSnowflake {
 const toBigInt = (snowflake: Snowflake | bigint): bigint =>
 	typeof snowflake === "bigint" ? snowflake : BigInt(snowflake);
 
-export const getTimestamp = (snowflake: Snowflake | bigint): bigint =>
-	(toBigInt(snowflake) >> 22n) + DISCORD_EPOCH;
+export const Snowflake = {
+	getTimestamp: (snowflake: Snowflake | bigint): bigint => (toBigInt(snowflake) >> 22n) + DISCORD_EPOCH,
 
-export const getWorkerId = (snowflake: Snowflake | bigint): bigint =>
-	(toBigInt(snowflake) & 0x3e0000n) >> 17n;
+	getWorkerId: (snowflake: Snowflake | bigint): bigint => (toBigInt(snowflake) & 0x3e0000n) >> 17n,
 
-export const getProcessId = (snowflake: Snowflake | bigint): bigint =>
-	(toBigInt(snowflake) & 0x1f000n) >> 12n;
+	getProcessId: (snowflake: Snowflake | bigint): bigint => (toBigInt(snowflake) & 0x1f000n) >> 12n,
 
-export const getIncrement = (snowflake: Snowflake | bigint): bigint =>
-	toBigInt(snowflake) & 0xfffn;
+	getIncrement: (snowflake: Snowflake | bigint): bigint => toBigInt(snowflake) & 0xfffn,
 
-export const getDate = (snowflake: Snowflake | bigint): Date =>
-	new Date(Number(getTimestamp(snowflake)));
+	getDate: (snowflake: Snowflake | bigint): Date => new Date(Number(Snowflake.getTimestamp(snowflake))),
 
-export const deconstruct = (
-	snowflake: Snowflake | bigint,
-): DeconstructedSnowflake => {
-	const id = toBigInt(snowflake);
-	const timestamp = getTimestamp(id);
-	return {
-		id,
-		timestamp,
-		workerId: getWorkerId(id),
-		processId: getProcessId(id),
-		increment: getIncrement(id),
-		date: new Date(Number(timestamp)),
-	};
-};
+	deconstruct: (snowflake: Snowflake | bigint): DeconstructedSnowflake => {
+		const id = toBigInt(snowflake);
+		const timestamp = Snowflake.getTimestamp(id);
+		return {
+			id,
+			timestamp,
+			workerId: Snowflake.getWorkerId(id),
+			processId: Snowflake.getProcessId(id),
+			increment: Snowflake.getIncrement(id),
+			date: new Date(Number(timestamp)),
+		};
+	},
 
-export const fromTimestamp = (timestamp: number | Date): Snowflake => {
-	const ms = timestamp instanceof Date ? timestamp.getTime() : timestamp;
-	return `${(BigInt(ms) - DISCORD_EPOCH) << 22n}`;
-};
+	fromTimestamp: (timestamp: number | Date): Snowflake => {
+		const ms = timestamp instanceof Date ? timestamp.getTime() : timestamp;
+		return `${(BigInt(ms) - DISCORD_EPOCH) << 22n}`;
+	},
 
-export const isSnowflake = (value: string): value is Snowflake => {
-	if (!/^\d{17,20}$/.test(value)) return false;
-	try {
-		const id = BigInt(value);
-		return id >= 0n && id <= 0xffffffffffffffffn;
-	} catch {
-		return false;
-	}
-};
+	isValid: (value: string): value is Snowflake => {
+		if (!/^\d{17,20}$/.test(value)) return false;
+		try {
+			const id = BigInt(value);
+			return id >= 0n && id <= 0xffffffffffffffffn;
+		} catch {
+			return false;
+		}
+	},
 
-export const compare = (
-	a: Snowflake | bigint,
-	b: Snowflake | bigint,
-): -1 | 0 | 1 => {
-	const bigA = toBigInt(a);
-	const bigB = toBigInt(b);
-	if (bigA < bigB) return -1;
-	if (bigA > bigB) return 1;
-	return 0;
-};
+	compare: (a: Snowflake | bigint, b: Snowflake | bigint): -1 | 0 | 1 => {
+		const bigA = toBigInt(a);
+		const bigB = toBigInt(b);
+		if (bigA < bigB) return -1;
+		if (bigA > bigB) return 1;
+		return 0;
+	},
 
-export const isOlderThan = (
-	snowflake: Snowflake | bigint,
-	other: Snowflake | bigint,
-): boolean => compare(snowflake, other) < 0;
+	isOlderThan: (snowflake: Snowflake | bigint, other: Snowflake | bigint): boolean =>
+		Snowflake.compare(snowflake, other) < 0,
 
-export const isNewerThan = (
-	snowflake: Snowflake | bigint,
-	other: Snowflake | bigint,
-): boolean => compare(snowflake, other) > 0;
+	isNewerThan: (snowflake: Snowflake | bigint, other: Snowflake | bigint): boolean =>
+		Snowflake.compare(snowflake, other) > 0,
 
-export const timestampFrom = (snowflake: Snowflake | bigint): number =>
-	Number(getTimestamp(snowflake));
+	timestampFrom: (snowflake: Snowflake | bigint): number => Number(Snowflake.getTimestamp(snowflake)),
+} as const;

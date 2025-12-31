@@ -3,12 +3,7 @@ import type { Channel, ChannelType } from "./channels.js";
 import type { Component, ModalComponent } from "./components.js";
 import type { Entitlement } from "./entitlements.js";
 import type { Guild, GuildMember } from "./guilds.js";
-import type {
-	AllowedMentions,
-	Attachment,
-	Embed,
-	Message,
-} from "./messages.js";
+import type { AllowedMentions, Attachment, Embed, Message } from "./messages.js";
 import type { Poll } from "./polls.js";
 import type { Role } from "./roles.js";
 import type { User } from "./users.js";
@@ -167,10 +162,7 @@ export interface ModalSubmitData {
 	resolved?: ResolvedData;
 }
 
-export type InteractionData =
-	| ApplicationCommandData
-	| MessageComponentData
-	| ModalSubmitData;
+export type InteractionData = ApplicationCommandData | MessageComponentData | ModalSubmitData;
 
 export interface AuthorizingIntegrationOwners {
 	"0"?: string;

@@ -1,9 +1,9 @@
-import {EventEmitter} from "node:events";
-import {API_BASE_URL, ApiVersion} from "../constants/index.js";
-import {type ApiErrorResponse, UsersAPI} from "../resources/index.js";
-import {buildMultipartBody, createFileAttachment, DEFAULT_ATTACHMENT_SIZE_LIMIT} from "../utils/index.js";
-import {BucketManager, getRouteKey} from "./bucket.js";
-import type {RestEvents} from "./events.js";
+import { EventEmitter } from "node:events";
+import { API_BASE_URL, ApiVersion } from "../constants/index.js";
+import { type ApiErrorResponse, SkusAPI, SoundboardsAPI, SubscriptionsAPI, UsersAPI } from "../resources/index.js";
+import { DEFAULT_ATTACHMENT_SIZE_LIMIT, Files } from "../utils/index.js";
+import { BucketManager, getRouteKey } from "./bucket.js";
+import type { RestEvents } from "./events.js";
 import {
 	CloudflareError,
 	FileTooLargeError,
@@ -24,9 +24,7 @@ const INVALID_REQUEST_WINDOW = 600_000;
 const LIB_VERSION = "0.0.1";
 const LIB_URL = "https://github.com/cordbun/cordbun";
 
-const VALID_API_VERSIONS = Object.values(ApiVersion).filter(
-	(v) => typeof v === "number",
-) as ApiVersion[];
+const VALID_API_VERSIONS = Object.values(ApiVersion).filter((v) => typeof v === "number") as ApiVersion[];
 const VALID_AUTH_TYPES = ["Bot", "Bearer"] as const;
 
 type ResolvedRestOptions = Required<Omit<RestOptions, "userAgent">> & {
@@ -34,6 +32,9 @@ type ResolvedRestOptions = Required<Omit<RestOptions, "userAgent">> & {
 };
 
 export class Rest extends EventEmitter<RestEvents> {
+	public readonly skus = new SkusAPI(this);
+	public readonly soundboards = new SoundboardsAPI(this);
+	public readonly subscriptions = new SubscriptionsAPI(this);
 	public readonly users = new UsersAPI(this);
 
 	private token: string;
@@ -57,10 +58,7 @@ export class Rest extends EventEmitter<RestEvents> {
 				if (this.invalidRequestCount > 0) {
 					this.emit("invalidRequestWarning", {
 						count: this.invalidRequestCount,
-						remainingTime: Math.max(
-							0,
-							this.invalidRequestResetTime - Date.now(),
-						),
+						remainingTime: Math.max(0, this.invalidRequestResetTime - Date.now()),
 					});
 				}
 			}, this.config.invalidRequestWarningInterval);
@@ -134,11 +132,7 @@ export class Rest extends EventEmitter<RestEvents> {
 			const responseData = await response.json();
 
 			if (!response.ok) {
-				throw RestError.fromResponse(
-					responseData as ApiErrorResponse,
-					response.status,
-					rateLimit ?? undefined,
-				);
+				throw RestError.fromResponse(responseData as ApiErrorResponse, response.status, rateLimit ?? undefined);
 			}
 
 			return {
@@ -160,19 +154,12 @@ export class Rest extends EventEmitter<RestEvents> {
 				return this.request(method, route, opts, retryCount + 1);
 			}
 
-			if (
-				error instanceof RestError &&
-				error.status >= 500 &&
-				retryCount < this.config.retries
-			) {
+			if (error instanceof RestError && error.status >= 500 && retryCount < this.config.retries) {
 				await Bun.sleep(1000 * (retryCount + 1));
 				return this.request(method, route, opts, retryCount + 1);
 			}
 
-			if (
-				error instanceof CloudflareError &&
-				retryCount < this.config.retries
-			) {
+			if (error instanceof CloudflareError && retryCount < this.config.retries) {
 				await Bun.sleep(1000 * (retryCount + 1));
 				return this.request(method, route, opts, retryCount + 1);
 			}
@@ -216,10 +203,7 @@ export class Rest extends EventEmitter<RestEvents> {
 	}
 
 	private validateOptions(options: RestOptions): ResolvedRestOptions {
-		if (
-			options.authType !== undefined &&
-			!VALID_AUTH_TYPES.includes(options.authType)
-		) {
+		if (options.authType !== undefined && !VALID_AUTH_TYPES.includes(options.authType)) {
 			throw new TypeError(
 				`Invalid authType: ${options.authType}. Must be one of: ${VALID_AUTH_TYPES.join(", ")}`,
 			);
@@ -228,9 +212,7 @@ export class Rest extends EventEmitter<RestEvents> {
 		if (options.version !== undefined) {
 			if (
 				!Number.isInteger(options.version) ||
-				!VALID_API_VERSIONS.includes(
-					options.version as (typeof VALID_API_VERSIONS)[number],
-				)
+				!VALID_API_VERSIONS.includes(options.version as (typeof VALID_API_VERSIONS)[number])
 			) {
 				throw new TypeError(
 					`Invalid version: ${options.version}. Must be one of: ${VALID_API_VERSIONS.join(", ")}`,
@@ -240,25 +222,18 @@ export class Rest extends EventEmitter<RestEvents> {
 
 		if (options.retries !== undefined) {
 			if (!Number.isInteger(options.retries) || options.retries < 0) {
-				throw new TypeError(
-					`Invalid retries: ${options.retries}. Must be a non-negative integer`,
-				);
+				throw new TypeError(`Invalid retries: ${options.retries}. Must be a non-negative integer`);
 			}
 		}
 
 		if (options.timeout !== undefined) {
 			if (typeof options.timeout !== "number" || options.timeout <= 0) {
-				throw new TypeError(
-					`Invalid timeout: ${options.timeout}. Must be a positive number`,
-				);
+				throw new TypeError(`Invalid timeout: ${options.timeout}. Must be a positive number`);
 			}
 		}
 
 		if (options.userAgent !== undefined) {
-			if (
-				typeof options.userAgent !== "string" ||
-				options.userAgent.trim() === ""
-			) {
+			if (typeof options.userAgent !== "string" || options.userAgent.trim() === "") {
 				throw new TypeError("Invalid userAgent: Must be a non-empty string");
 			}
 		}
@@ -324,9 +299,7 @@ export class Rest extends EventEmitter<RestEvents> {
 		return data.byteLength;
 	}
 
-	private isBufferLike(
-		value: unknown,
-	): value is Buffer | ArrayBuffer | Uint8Array {
+	private isBufferLike(value: unknown): value is Buffer | ArrayBuffer | Uint8Array {
 		return (
 			value instanceof ArrayBuffer ||
 			value instanceof Uint8Array ||
@@ -346,11 +319,9 @@ export class Rest extends EventEmitter<RestEvents> {
 				}
 			}
 
-			const files = opts.files.map((file, i) =>
-				createFileAttachment(i, file.name, file.data, file.contentType),
-			);
+			const files = opts.files.map((file, i) => Files.createFile(i, file.name, file.data, file.contentType));
 			const payload = (opts.body ?? {}) as Record<string, unknown>;
-			return buildMultipartBody(payload, files);
+			return Files.buildMultipartBody(payload, files);
 		}
 
 		if (opts.body === undefined) {
@@ -368,9 +339,7 @@ export class Rest extends EventEmitter<RestEvents> {
 			if (!headers.has("Content-Type")) {
 				headers.set("Content-Type", "application/octet-stream");
 			}
-			return opts.body instanceof ArrayBuffer
-				? new Uint8Array(opts.body)
-				: opts.body;
+			return opts.body instanceof ArrayBuffer ? new Uint8Array(opts.body) : opts.body;
 		}
 
 		headers.set("Content-Type", "application/json");
@@ -394,10 +363,7 @@ export class Rest extends EventEmitter<RestEvents> {
 		};
 	}
 
-	private async handleRateLimit(
-		response: Response,
-		routeKey: string,
-	): Promise<never> {
+	private async handleRateLimit(response: Response, routeKey: string): Promise<never> {
 		const rateLimit = this.parseRateLimitHeaders(response.headers);
 		const scope = rateLimit?.scope;
 

@@ -23,9 +23,7 @@ export enum GatewayIntent {
 }
 
 export const PrivilegedIntents =
-	GatewayIntent.GuildMembers |
-	GatewayIntent.GuildPresences |
-	GatewayIntent.MessageContent;
+	GatewayIntent.GuildMembers | GatewayIntent.GuildPresences | GatewayIntent.MessageContent;
 
 export const AllIntents = Object.values(GatewayIntent)
 	.filter((v): v is number => typeof v === "number")

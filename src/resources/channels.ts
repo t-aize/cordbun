@@ -152,10 +152,7 @@ export type ModifyChannelParams = Partial<
 	default_sort_order?: SortOrderType | null;
 };
 
-export type EditChannelPermissionsParams = Partial<
-	Pick<Overwrite, "allow" | "deny">
-> &
-	Pick<Overwrite, "type">;
+export type EditChannelPermissionsParams = Partial<Pick<Overwrite, "allow" | "deny">> & Pick<Overwrite, "type">;
 
 export interface CreateChannelInviteParams {
 	max_age?: number;
@@ -208,17 +205,11 @@ export interface StartThreadInForumOrMediaChannelParams {
 	applied_tags?: string[];
 }
 
-export type ListThreadMembersParams = Pick<
-	PaginationParams,
-	"after" | "limit"
-> & {
+export type ListThreadMembersParams = Pick<PaginationParams, "after" | "limit"> & {
 	with_member?: boolean;
 };
 
-export type ListArchivedThreadsParams = Pick<
-	PaginationParams,
-	"before" | "limit"
->;
+export type ListArchivedThreadsParams = Pick<PaginationParams, "before" | "limit">;
 
 export interface ListArchivedThreadsResponse {
 	threads: Channel[];

@@ -1,10 +1,4 @@
-import type {
-	Channel,
-	DefaultReaction,
-	ForumTag,
-	Overwrite,
-	ThreadMember,
-} from "./channels.js";
+import type { Channel, DefaultReaction, ForumTag, Overwrite, ThreadMember } from "./channels.js";
 import type { Emoji } from "./emojis.js";
 import type { Role, RoleColors } from "./roles.js";
 import type { Sticker } from "./stickers.js";
@@ -344,16 +338,12 @@ export interface AddGuildMemberParams {
 	deaf?: boolean;
 }
 
-export type ModifyGuildMemberParams = Partial<
-	Pick<GuildMember, "nick" | "roles" | "mute" | "deaf" | "flags">
-> & {
+export type ModifyGuildMemberParams = Partial<Pick<GuildMember, "nick" | "roles" | "mute" | "deaf" | "flags">> & {
 	channel_id?: string;
 	communication_disabled_until?: string | null;
 };
 
-export type ModifyCurrentMemberParams = Partial<
-	Pick<GuildMember, "nick" | "banner" | "avatar">
-> & {
+export type ModifyCurrentMemberParams = Partial<Pick<GuildMember, "nick" | "banner" | "avatar">> & {
 	bio?: string | null;
 };
 
@@ -404,9 +394,7 @@ export interface BeginGuildPruneParams {
 	reason?: string;
 }
 
-export type ModifyGuildWelcomeScreenParams = Partial<
-	Pick<WelcomeScreen, "description" | "welcome_channels">
-> & {
+export type ModifyGuildWelcomeScreenParams = Partial<Pick<WelcomeScreen, "description" | "welcome_channels">> & {
 	enabled?: boolean;
 };
 

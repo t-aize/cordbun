@@ -1,5 +1,5 @@
-import type {JsonErrorCode} from "../constants/index.js";
-import type {ApiErrorResponse} from "../resources/errors.js";
+import type { JsonErrorCode } from "../constants/index.js";
+import type { ApiErrorResponse } from "../resources/errors.js";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -72,18 +72,8 @@ export class RestError extends Error {
 		this.name = "RestError";
 	}
 
-	static fromResponse(
-		response: ApiErrorResponse,
-		status: number,
-		rateLimit?: RateLimitData,
-	): RestError {
-		return new RestError(
-			status,
-			response.code,
-			response.message,
-			response.errors,
-			rateLimit,
-		);
+	static fromResponse(response: ApiErrorResponse, status: number, rateLimit?: RateLimitData): RestError {
+		return new RestError(status, response.code, response.message, response.errors, rateLimit);
 	}
 }
 
@@ -130,5 +120,3 @@ export class TimeoutError extends Error {
 		this.name = "TimeoutError";
 	}
 }
-
-export type RouteMethod = `${HttpMethod} ${string}`;

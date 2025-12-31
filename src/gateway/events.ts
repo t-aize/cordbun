@@ -14,12 +14,7 @@ import type {
 	User,
 	VoiceState,
 } from "../resources/index.js";
-import type {
-	Activity,
-	GatewayUnavailableGuild,
-	PresenceStatus,
-	ReadyData,
-} from "./types.js";
+import type { Activity, GatewayUnavailableGuild, PresenceStatus, ReadyData } from "./types.js";
 
 export interface GatewayEvents {
 	ready: ReadyData;

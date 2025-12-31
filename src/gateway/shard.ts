@@ -24,9 +24,7 @@ try {
 	erlpack = null;
 }
 
-type EventHandler<T extends GatewayEventName> = (
-	data: GatewayEvents[T],
-) => void;
+type EventHandler<T extends GatewayEventName> = (data: GatewayEvents[T]) => void;
 type EventHandlers = {
 	[K in GatewayEventName]?: Set<EventHandler<K>>;
 };
@@ -36,10 +34,7 @@ export interface Shard {
 	connect: () => Promise<void>;
 	disconnect: (code?: number) => void;
 	send: <T>(op: GatewayOpcode, data: T) => void;
-	on: <T extends GatewayEventName>(
-		event: T,
-		handler: EventHandler<T>,
-	) => () => void;
+	on: <T extends GatewayEventName>(event: T, handler: EventHandler<T>) => () => void;
 	off: <T extends GatewayEventName>(event: T, handler: EventHandler<T>) => void;
 	updatePresence: (data: IdentifyData["presence"]) => void;
 }
@@ -99,10 +94,7 @@ export const createShard = (options: ShardOptions): Shard => {
 		return JSON.parse(new TextDecoder().decode(data));
 	};
 
-	const emit = <T extends GatewayEventName>(
-		event: T,
-		data: GatewayEvents[T],
-	): void => {
+	const emit = <T extends GatewayEventName>(event: T, data: GatewayEvents[T]): void => {
 		const eventHandlers = handlers[event] as Set<EventHandler<T>> | undefined;
 		if (eventHandlers) {
 			for (const handler of eventHandlers) {
@@ -280,11 +272,7 @@ export const createShard = (options: ShardOptions): Shard => {
 			return;
 		}
 
-		if (
-			RESUMABLE_CLOSE_CODES.has(event.code) ||
-			event.code === 1006 ||
-			event.code < 4000
-		) {
+		if (RESUMABLE_CLOSE_CODES.has(event.code) || event.code === 1006 || event.code < 4000) {
 			if (reconnectAttempts < maxReconnectAttempts) {
 				reconnectAttempts++;
 				const delay = Math.min(1000 * 2 ** reconnectAttempts, 30000);
@@ -335,10 +323,7 @@ export const createShard = (options: ShardOptions): Shard => {
 		setStatus("disconnected");
 	};
 
-	const on = <T extends GatewayEventName>(
-		event: T,
-		handler: EventHandler<T>,
-	): (() => void) => {
+	const on = <T extends GatewayEventName>(event: T, handler: EventHandler<T>): (() => void) => {
 		if (!handlers[event]) {
 			handlers[event] = new Set() as EventHandlers[T];
 		}
@@ -347,10 +332,7 @@ export const createShard = (options: ShardOptions): Shard => {
 		return () => off(event, handler);
 	};
 
-	const off = <T extends GatewayEventName>(
-		event: T,
-		handler: EventHandler<T>,
-	): void => {
+	const off = <T extends GatewayEventName>(event: T, handler: EventHandler<T>): void => {
 		(handlers[event] as Set<EventHandler<T>> | undefined)?.delete(handler);
 	};
 
