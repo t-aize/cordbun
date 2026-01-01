@@ -18,6 +18,7 @@ import {
 	StickersAPI,
 	SubscriptionsAPI,
 	UsersAPI,
+	VoiceAPI,
 } from "../resources/index.js";
 import { DEFAULT_ATTACHMENT_SIZE_LIMIT, Files } from "../utils/index.js";
 import { BucketManager, getRouteKey } from "./bucket.js";
@@ -67,6 +68,7 @@ export class REST extends EventEmitter<RESTEvents> {
 	public readonly stickers = new StickersAPI(this);
 	public readonly subscriptions = new SubscriptionsAPI(this);
 	public readonly users = new UsersAPI(this);
+	public readonly voice = new VoiceAPI(this);
 
 	private token: string;
 	private config: ResolvedRESTOptions;

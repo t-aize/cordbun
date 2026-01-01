@@ -1,5 +1,7 @@
+import type { PermissionFlags } from "../constants/index.js";
 import type { REST } from "../rest/index.js";
 import type { Guild } from "./guilds.js";
+import type { OAuth2Scope } from "./oauth2.js";
 import type { Team } from "./teams.js";
 import type { User } from "./users.js";
 
@@ -69,9 +71,9 @@ export enum ActivityLocationKind {
  */
 export interface InstallParams {
 	/** Scopes to add the application to the server with */
-	scopes: string[];
+	scopes: OAuth2Scope[];
 	/** Permissions to request for the bot role */
-	permissions: string;
+	permissions: `${PermissionFlags}`;
 }
 
 /**
