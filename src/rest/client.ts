@@ -8,6 +8,7 @@ import {
 	EmojisAPI,
 	EntitlementsAPI,
 	GuildScheduledEventsAPI,
+	GuildsAPI,
 	GuildTemplatesAPI,
 	InvitesAPI,
 	LobbiesAPI,
@@ -51,23 +52,59 @@ type ResolvedRESTOptions = Required<Omit<RESTOptions, "userAgent">> & {
 	userAgent: string;
 };
 
+/**
+ * REST client for making requests to the Discord API.
+ * Handles rate limiting, retries, and provides typed API methods.
+ *
+ * @example
+ * ```typescript
+ * const rest = new REST("Bot YOUR_TOKEN");
+ *
+ * // Using typed API methods
+ * const user = await rest.users.getCurrentUser();
+ *
+ * // Using raw methods
+ * const guilds = await rest.get<Guild[]>("/users/@me/guilds");
+ * ```
+ *
+ * @see {@link https://discord.com/developers/docs/reference}
+ */
 export class REST extends EventEmitter<RESTEvents> {
+	/** API methods for application role connection metadata */
 	public readonly applicationRoleConnectionMetadata = new ApplicationRoleConnectionMetadataAPI(this);
+	/** API methods for applications */
 	public readonly applications = new ApplicationsAPI(this);
+	/** API methods for auto moderation */
 	public readonly autoModeration = new AutoModerationAPI(this);
+	/** API methods for emojis */
 	public readonly emojis = new EmojisAPI(this);
+	/** API methods for entitlements */
 	public readonly entitlements = new EntitlementsAPI(this);
+	/** API methods for guild scheduled events */
 	public readonly guildScheduledEvents = new GuildScheduledEventsAPI(this);
+	/** API methods for guild templates */
 	public readonly guildTemplates = new GuildTemplatesAPI(this);
+	/** API methods for guilds */
+	public readonly guilds = new GuildsAPI(this);
+	/** API methods for invites */
 	public readonly invites = new InvitesAPI(this);
+	/** API methods for lobbies */
 	public readonly lobbies = new LobbiesAPI(this);
+	/** API methods for polls */
 	public readonly polls = new PollsAPI(this);
+	/** API methods for SKUs */
 	public readonly skus = new SkusAPI(this);
+	/** API methods for soundboards */
 	public readonly soundboards = new SoundboardsAPI(this);
+	/** API methods for stage instances */
 	public readonly stageInstances = new StageInstancesAPI(this);
+	/** API methods for stickers */
 	public readonly stickers = new StickersAPI(this);
+	/** API methods for subscriptions */
 	public readonly subscriptions = new SubscriptionsAPI(this);
+	/** API methods for users */
 	public readonly users = new UsersAPI(this);
+	/** API methods for voice */
 	public readonly voice = new VoiceAPI(this);
 
 	private token: string;
@@ -77,6 +114,11 @@ export class REST extends EventEmitter<RESTEvents> {
 	private invalidRequestResetTime = Date.now() + INVALID_REQUEST_WINDOW;
 	private readonly invalidRequestWarningTimer: Timer | null = null;
 
+	/**
+	 * Creates a new REST client.
+	 * @param token - The bot token or OAuth2 access token
+	 * @param options - Configuration options
+	 */
 	constructor(token: string, options: RESTOptions = {}) {
 		super();
 		this.token = token;
@@ -98,6 +140,21 @@ export class REST extends EventEmitter<RESTEvents> {
 		}
 	}
 
+	/**
+	 * Makes a request to the Discord API.
+	 * Handles rate limiting, retries, and error parsing.
+	 *
+	 * @typeParam T - The expected response type
+	 * @param method - The HTTP method to use
+	 * @param route - The API route (e.g., "/users/@me")
+	 * @param opts - Request options
+	 * @param retryCount - Current retry attempt (internal use)
+	 * @returns The response data, status, headers, and rate limit info
+	 * @throws {@link RESTError} When the API returns an error response
+	 * @throws {@link RateLimitError} When rate limited (before retry)
+	 * @throws {@link TimeoutError} When the request times out after all retries
+	 * @throws {@link CloudflareError} When blocked by Cloudflare
+	 */
 	async request<T>(
 		method: HttpMethod,
 		route: RouteLike,
@@ -203,30 +260,73 @@ export class REST extends EventEmitter<RESTEvents> {
 		}
 	}
 
+	/**
+	 * Makes a GET request to the Discord API.
+	 * @typeParam T - The expected response type
+	 * @param route - The API route
+	 * @param opts - Request options
+	 * @returns The response data
+	 */
 	async get<T>(route: RouteLike, opts?: RequestOptions): Promise<T> {
 		return (await this.request<T>("GET", route, opts)).data;
 	}
 
+	/**
+	 * Makes a POST request to the Discord API.
+	 * @typeParam T - The expected response type
+	 * @param route - The API route
+	 * @param opts - Request options
+	 * @returns The response data
+	 */
 	async post<T>(route: RouteLike, opts?: RequestOptions): Promise<T> {
 		return (await this.request<T>("POST", route, opts)).data;
 	}
 
+	/**
+	 * Makes a PUT request to the Discord API.
+	 * @typeParam T - The expected response type
+	 * @param route - The API route
+	 * @param opts - Request options
+	 * @returns The response data
+	 */
 	async put<T>(route: RouteLike, opts?: RequestOptions): Promise<T> {
 		return (await this.request<T>("PUT", route, opts)).data;
 	}
 
+	/**
+	 * Makes a PATCH request to the Discord API.
+	 * @typeParam T - The expected response type
+	 * @param route - The API route
+	 * @param opts - Request options
+	 * @returns The response data
+	 */
 	async patch<T>(route: RouteLike, opts?: RequestOptions): Promise<T> {
 		return (await this.request<T>("PATCH", route, opts)).data;
 	}
 
-	async delete<T>(route: RouteLike, opts?: RequestOptions): Promise<T> {
+	/**
+	 * Makes a DELETE request to the Discord API.
+	 * @typeParam T - The expected response type (defaults to void for 204 responses)
+	 * @param route - The API route
+	 * @param opts - Request options
+	 * @returns The response data
+	 */
+	async delete<T = void>(route: RouteLike, opts?: RequestOptions): Promise<T> {
 		return (await this.request<T>("DELETE", route, opts)).data;
 	}
 
+	/**
+	 * Updates the token used for authentication.
+	 * @param token - The new token
+	 */
 	setToken(token: string): void {
 		this.token = token;
 	}
 
+	/**
+	 * Cleans up all resources held by the REST client.
+	 * Should be called when the client is no longer needed.
+	 */
 	destroy(): void {
 		this.buckets.destroy();
 		if (this.invalidRequestWarningTimer) {
