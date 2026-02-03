@@ -1,16 +1,16 @@
 {
-  "permissions": {
-    "allow": [
-      "WebFetch(domain:support.discord.com)",
-      "Bash(mkdir:*)",
-      "Bash(bun run type-check:*)",
-      "Bash(git mv:*)",
-      "WebFetch(domain:raw.githubusercontent.com)",
-      "WebFetch(domain:discord.com)",
-      "WebSearch",
-      "Bash(bun run build)",
-      "Bash(bun run check:*)",
-      "Bash(bun install:*)"
-    ]
-  }
+	"permissions": {
+		"allow": [
+			"WebFetch(domain:support.discord.com)",
+			"Bash(mkdir:*)",
+			"Bash(bun run type-check:*)",
+			"Bash(git mv:*)",
+			"WebFetch(domain:raw.githubusercontent.com)",
+			"WebFetch(domain:discord.com)",
+			"WebSearch",
+			"Bash(bun run build)",
+			"Bash(bun run check:*)",
+			"Bash(bun install:*)"
+		]
+	}
 }
