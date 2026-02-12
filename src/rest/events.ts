@@ -1,4 +1,4 @@
-import type { RateLimitData } from "./types.js";
+import type { RateLimitScope } from "./types.js";
 
 /**
  * Events emitted by the REST client.
@@ -57,7 +57,7 @@ export interface RateLimitInfo {
 	/** The number of seconds to wait before retrying */
 	retryAfter: number;
 	/** The scope of the rate limit */
-	scope?: RateLimitData["scope"];
+	scope?: RateLimitScope;
 }
 
 /**
